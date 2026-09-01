@@ -1,6 +1,6 @@
 """Embedding service with SentenceTransformers, Cohere, Hugging Face, and fast deterministic fallback."""
 
-from typing import List, Optional
+from typing import List, Optional, Dict, Any, Tuple
 import os
 import hashlib
 import math
