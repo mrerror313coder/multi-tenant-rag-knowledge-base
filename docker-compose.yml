@@ -1,0 +1,21 @@
+version: '3.8'
+
+services:
+  web:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      - PORT=8000
+      - HOST=0.0.0.0
+      - DATABASE_URL=sqlite:///./rag_metadata.db
+      - CHROMA_PERSIST_DIR=/app/chroma_data
+      - PRIMARY_LLM_PROVIDER=gemini
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - GROQ_API_KEY=${GROQ_API_KEY}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+    volumes:
+      - ./chroma_data:/app/chroma_data
+      - ./uploaded_documents:/app/uploaded_documents
+      - ./rag_metadata.db:/app/rag_metadata.db
+    restart: unless-stopped

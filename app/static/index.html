@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Multi-Tenant RAG Knowledge Base | Multimodal Vision & Voice AI</title>
+  <meta name="description" content="Enterprise Multi-Tenant RAG Knowledge Base with Multimodal Vision, Voice Input/Output, and Zero-Leakage Grounded AI.">
+  <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+
+  <!-- App Header -->
+  <header class="app-header">
+    <div class="brand-section">
+      <div class="brand-logo">⚡</div>
+      <div class="brand-title">
+        <h1>Multi-Tenant RAG</h1>
+        <div class="brand-subtitle">MULTIMODAL • VOICE • ZERO-LEAKAGE</div>
+      </div>
+    </div>
+
+    <!-- Tenant Context Selector -->
+    <div class="tenant-bar">
+      <select id="tenantSelect" class="tenant-select" onchange="switchTenant(this.value)">
+        <!-- Injected dynamically -->
+      </select>
+      <button class="btn-new-org" onclick="openNewOrgModal()" title="Register New Organization">+ New</button>
+      <button class="btn-delete-org" onclick="deleteCurrentTenant()" title="Delete Active Tenant Organization">🗑️</button>
+    </div>
+
+    <!-- Navigation Tabs -->
+    <nav class="nav-tabs">
+      <button class="nav-tab-btn active" onclick="switchTab('chatTab', this)">💬 Chat</button>
+      <button class="nav-tab-btn" onclick="switchTab('docsTab', this)">📁 Docs</button>
+      <button class="nav-tab-btn" onclick="switchTab('isolationTab', this)">🛡️ Isolation</button>
+      <button class="nav-tab-btn" onclick="switchTab('evalTab', this)">📊 Golden Eval</button>
+    </nav>
+  </header>
+
+  <!-- Main Container -->
+  <main class="main-container">
+
+    <!-- TAB 1: Multimodal & Voice Grounded RAG Chat -->
+    <section id="chatTab" class="tab-content active">
+      <div class="chat-grid">
+        <!-- Main Chat Area -->
+        <div class="chat-main-card">
+          <div class="chat-header">
+            <div class="chat-header-title">
+              <span class="status-indicator"></span>
+              <span id="chatTenantName">Acme Corporation</span> Knowledge Base
+            </div>
+            <div style="font-size: 0.8rem; color: var(--text-muted); display: flex; align-items: center; gap: 0.5rem;">
+              <span>Model: <strong id="currentModelBadge" style="color: #a5b4fc; font-family: 'JetBrains Mono';">Gemini 2.0 Flash (Multimodal)</strong></span>
+            </div>
+          </div>
+
+          <div id="chatMessages" class="chat-messages">
+            <!-- Welcome message -->
+            <div class="chat-bubble assistant">
+              <div>
+                👋 Welcome! I am your organization's private Multimodal RAG assistant.
+              </div>
+              <div style="margin-top: 0.5rem; font-size: 0.85rem; color: var(--text-secondary);">
+                • 💬 <strong>Ask questions:</strong> Grounded strictly in your private documents.<br>
+                • 🖼️ <strong>Send screenshots or images:</strong> Paste via <kbd style="background: rgba(255,255,255,0.1); padding: 2px 5px; border-radius: 3px;">Ctrl+V</kbd> or attach an image.<br>
+                • 🎙️ <strong>Voice input:</strong> Click the microphone to speak your query.<br>
+                • 🔊 <strong>Voice output:</strong> Click "Listen" on any answer to hear speech playback.
+              </div>
+            </div>
+          </div>
+
+          <!-- Live Voice Recording Banner -->
+          <div id="recordingStatusBar" class="recording-status-bar">
+            <div class="recording-indicator-pulse"></div>
+            <span id="recordingStatusText" class="recording-status-text">🔴 Recording... Speak now (auto-stops when finished)</span>
+            <span id="recordingTimerBadge" class="recording-timer-badge">0:00</span>
+            <button class="btn-stop-recording" onclick="stopVoiceRecording()">⏹️ Done</button>
+          </div>
+
+          <!-- Staged Image Attachment Preview Bar -->
+          <div id="attachmentPreviewBar" class="attachment-preview-bar">
+            <div class="attachment-chip">
+              <img id="attachmentThumbnail" class="attachment-thumbnail" src="" alt="Thumbnail">
+              <span id="attachmentName">screenshot.png</span>
+              <button class="btn-remove-attachment" onclick="clearStagedImage()" title="Remove image">×</button>
+            </div>
+            <span style="font-size: 0.75rem; color: #a5b4fc;">Screenshot attached. Ask a question about it!</span>
+          </div>
+
+          <!-- Input Bar with Voice & Vision Controls -->
+          <div class="chat-input-bar">
+            <!-- Image / Screenshot Upload Button -->
+            <input type="file" id="imageFileInput" accept="image/*" style="display: none;" onchange="handleImageSelection(event)">
+            <button class="btn-action-icon" onclick="document.getElementById('imageFileInput').click()" title="Attach Screenshot or Image">
+              🖼️
+            </button>
+
+            <!-- Microphone Voice Record Button -->
+            <button id="micBtn" class="btn-action-icon" onclick="toggleVoiceRecording()" title="Speak Voice Message (Click to start/stop)">
+              🎙️
+            </button>
+
+            <!-- Voice Language Mode Selector -->
+            <select id="voiceLangSelect" class="voice-lang-select" title="Voice Language Mode">
+              <option value="ur" selected>🇵🇰 اردو</option>
+              <option value="auto">🌐 Auto</option>
+              <option value="en">🇬🇧 En</option>
+            </select>
+
+            <!-- Text Input (Also listens for Ctrl+V clipboard image paste) -->
+            <input
+              type="text"
+              id="chatInput"
+              class="chat-input"
+              placeholder="Type question, paste screenshot (Ctrl+V), or click 🎙️ to speak..."
+              onkeydown="if(event.key === 'Enter') sendChatMessage()"
+            />
+
+            <!-- Send Button -->
+            <button id="sendBtn" class="btn-send" onclick="sendChatMessage()">
+              <span>Send</span> ➔
+            </button>
+          </div>
+        </div>
+
+        <!-- Sidebar Citation / Context Inspector -->
+        <div class="chat-sidebar">
+          <div class="sidebar-header">
+            <span>Retrieved Chunks & Citations</span>
+            <span id="chunkCountBadge" style="font-family: 'JetBrains Mono'; color: var(--accent-cyan); font-size: 0.8rem;">0 Chunks</span>
+          </div>
+          <div id="retrievedChunksContainer" class="sidebar-content">
+            <div style="color: var(--text-muted); font-size: 0.85rem; text-align: center; margin-top: 3rem;">
+              Retrieved context chunks and source snippets for your active tenant will appear here in real time.
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 2: Document Management & Chunking -->
+    <section id="docsTab" class="tab-content">
+      <div class="doc-manager-grid">
+        <!-- Upload Card -->
+        <div>
+          <div class="upload-card" id="dropZone" onclick="document.getElementById('fileInput').click()">
+            <input type="file" id="fileInput" style="display: none;" accept=".pdf,.txt,.md,.json,.csv" onchange="handleFileUpload(event)">
+            <span class="upload-icon">📤</span>
+            <h3 style="font-family: 'Outfit'; margin-bottom: 0.5rem;">Upload Document</h3>
+            <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 1rem;">
+              Drop PDF, Markdown, or TXT files here to trigger automated chunking & vector embedding.
+            </p>
+            <button class="btn-send" style="margin: 0 auto; padding: 0.5rem 1.25rem;">Browse Files</button>
+          </div>
+
+          <div style="margin-top: 1.5rem; background: var(--bg-surface); padding: 1.25rem; border-radius: var(--radius-md); border: 1px solid var(--border-subtle);">
+            <h4 style="font-size: 0.85rem; color: #cbd5e1; margin-bottom: 0.5rem;">⚙️ Ingestion Parameters</h4>
+            <div style="font-size: 0.8rem; color: var(--text-secondary); line-height: 1.6; font-family: 'JetBrains Mono';">
+              • Chunk Size: 500 tokens<br>
+              • Overlap: 50 tokens<br>
+              • Splitting: Recursive boundary<br>
+              • Vector Store: ChromaDB HNSW<br>
+              • Isolation: Scoped by org_id
+            </div>
+          </div>
+        </div>
+
+        <!-- Document Table -->
+        <div class="doc-table-card">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem;">
+            <h3 style="font-family: 'Outfit';">Tenant Documents</h3>
+            <button class="btn-new-org" onclick="loadTenantDocuments()">🔄 Refresh List</button>
+          </div>
+          <table class="table-custom">
+            <thead>
+              <tr>
+                <th>Filename</th>
+                <th>Type</th>
+                <th>Size</th>
+                <th>Chunks</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="docsTableBody">
+              <tr>
+                <td colspan="6" style="text-align: center; color: var(--text-muted);">Loading documents...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 3: Cross-Tenant Isolation Proof Lab -->
+    <section id="isolationTab" class="tab-content">
+      <div class="proof-banner">
+        <div>
+          <h3 style="color: #34d399; font-family: 'Outfit'; margin-bottom: 0.25rem;">🛡️ Riskiest First Gate: Vector Retrieval Isolation Proof</h3>
+          <p style="color: var(--text-secondary); font-size: 0.85rem;">
+            Proves mathematically and empirically that vector queries executed as Org A return 0% chunks from Org B, even when documents share identical topic titles (e.g. "Project Phoenix").
+          </p>
+        </div>
+        <button class="btn-send" onclick="runLiveIsolationCheck()">⚡ Run Live Isolation Audit</button>
+      </div>
+
+      <div class="isolation-lab-grid">
+        <!-- Org A Panel -->
+        <div class="tenant-panel">
+          <div class="tenant-panel-header">
+            <div>
+              <h4 style="color: #a5b4fc;">Organization A: Acme Corporation</h4>
+              <span style="font-size: 0.75rem; color: var(--text-muted);">Internal Topic: Quantum Processor Phoenix ($12.5M)</span>
+            </div>
+            <span class="status-badge ready">Isolated</span>
+          </div>
+          <div id="orgARetrievalBox" style="font-size: 0.85rem; color: var(--text-secondary); min-height: 220px; background: rgba(0,0,0,0.3); border-radius: var(--radius-sm); padding: 1rem;">
+            Click "Run Live Isolation Audit" to inspect retrieved chunks.
+          </div>
+        </div>
+
+        <!-- Org B Panel -->
+        <div class="tenant-panel">
+          <div class="tenant-panel-header">
+            <div>
+              <h4 style="color: #f472b6;">Organization B: Cyberdyne Systems</h4>
+              <span style="font-size: 0.75rem; color: var(--text-muted);">Internal Topic: Cybernetic Defense Phoenix ($840M)</span>
+            </div>
+            <span class="status-badge ready">Isolated</span>
+          </div>
+          <div id="orgBRetrievalBox" style="font-size: 0.85rem; color: var(--text-secondary); min-height: 220px; background: rgba(0,0,0,0.3); border-radius: var(--radius-sm); padding: 1rem;">
+            Click "Run Live Isolation Audit" to inspect retrieved chunks.
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 4: Golden Evaluation Runner -->
+    <section id="evalTab" class="tab-content">
+      <div class="proof-banner" style="border-color: rgba(99, 102, 241, 0.4);">
+        <div>
+          <h3 style="color: #c7d2fe; font-family: 'Outfit'; margin-bottom: 0.25rem;">📊 Production Golden Evaluation Suite</h3>
+          <p style="color: var(--text-secondary); font-size: 0.85rem;">
+            Automated benchmark test running 20+ multi-tenant test cases to evaluate Retrieval Recall, Grounding Accuracy, Refusal Precision, and Cross-Tenant Isolation.
+          </p>
+        </div>
+        <button class="btn-send" onclick="runGoldenEval()">🚀 Execute Golden Eval Suite</button>
+      </div>
+
+      <!-- Metrics Scorecards -->
+      <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-bottom: 1.5rem;">
+        <div style="background: var(--bg-surface); border: 1px solid var(--border-subtle); padding: 1.25rem; border-radius: var(--radius-md);">
+          <div style="font-size: 0.8rem; color: var(--text-muted);">Zero-Leakage Isolation</div>
+          <div id="metricIsolation" style="font-family: 'Outfit'; font-size: 1.8rem; font-weight: 700; color: #34d399;">100%</div>
+          <div style="font-size: 0.75rem; color: var(--text-muted);">Pass Gate: 100%</div>
+        </div>
+        <div style="background: var(--bg-surface); border: 1px solid var(--border-subtle); padding: 1.25rem; border-radius: var(--radius-md);">
+          <div style="font-size: 0.8rem; color: var(--text-muted);">Retrieval Recall @ 3</div>
+          <div id="metricRecall" style="font-family: 'Outfit'; font-size: 1.8rem; font-weight: 700; color: var(--accent-cyan);">--</div>
+          <div style="font-size: 0.75rem; color: var(--text-muted);">Pass Gate: ≥ 90%</div>
+        </div>
+        <div style="background: var(--bg-surface); border: 1px solid var(--border-subtle); padding: 1.25rem; border-radius: var(--radius-md);">
+          <div style="font-size: 0.8rem; color: var(--text-muted);">Grounding & Refusal Accuracy</div>
+          <div id="metricGrounding" style="font-family: 'Outfit'; font-size: 1.8rem; font-weight: 700; color: #a78bfa;">--</div>
+          <div style="font-size: 0.75rem; color: var(--text-muted);">Pass Gate: ≥ 85%</div>
+        </div>
+        <div style="background: var(--bg-surface); border: 1px solid var(--border-subtle); padding: 1.25rem; border-radius: var(--radius-md);">
+          <div style="font-size: 0.8rem; color: var(--text-muted);">Average Latency / Cost</div>
+          <div id="metricLatency" style="font-family: 'Outfit'; font-size: 1.8rem; font-weight: 700; color: #f59e0b;">--</div>
+          <div style="font-size: 0.75rem; color: var(--text-muted);">UX Budget: < 5000ms</div>
+        </div>
+      </div>
+
+      <!-- Eval Details Table -->
+      <div class="doc-table-card">
+        <h4 style="font-family: 'Outfit'; margin-bottom: 1rem;">Test Run Details</h4>
+        <table class="table-custom">
+          <thead>
+            <tr>
+              <th>Test ID</th>
+              <th>Tenant</th>
+              <th>Query</th>
+              <th>Retrieval Recall</th>
+              <th>Grounding</th>
+              <th>Latency</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody id="evalTableBody">
+            <tr>
+              <td colspan="7" style="text-align: center; color: var(--text-muted);">Click "Execute Golden Eval Suite" to run automated tests.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Modal: Register New Organization -->
+  <div id="newOrgModal" class="modal-overlay">
+    <div class="modal-card">
+      <h3 style="font-family: 'Outfit'; margin-bottom: 1rem;">Register New Organization Tenant</h3>
+      <div style="margin-bottom: 1rem;">
+        <label style="display: block; font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.35rem;">Organization Name</label>
+        <input type="text" id="newOrgName" class="chat-input" style="width: 100%;" placeholder="e.g. Wayne Enterprises">
+      </div>
+      <div style="margin-bottom: 1.5rem;">
+        <label style="display: block; font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.35rem;">Tenant ID (Optional Slug)</label>
+        <input type="text" id="newOrgId" class="chat-input" style="width: 100%;" placeholder="e.g. org_wayne_enterprises">
+      </div>
+      <div style="display: flex; justify-content: flex-end; gap: 0.75rem;">
+        <button class="btn-new-org" onclick="closeNewOrgModal()">Cancel</button>
+        <button class="btn-send" onclick="submitNewOrganization()">Create Organization</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>

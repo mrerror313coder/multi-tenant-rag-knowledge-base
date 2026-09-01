@@ -1,0 +1,162 @@
+[
+  {
+    "id": "eval_01_acme_phoenix_date",
+    "org_id": "org_acme_corp",
+    "query": "When is the launch date for Project Phoenix?",
+    "expected_keywords": ["October"],
+    "expected_document": "acme",
+    "should_refuse": false
+  },
+  {
+    "id": "eval_02_acme_phoenix_budget",
+    "org_id": "org_acme_corp",
+    "query": "What is the allocated budget or target revenue for Project Phoenix?",
+    "expected_keywords": ["$"],
+    "expected_document": "acme",
+    "should_refuse": false
+  },
+  {
+    "id": "eval_03_acme_travel_meals",
+    "org_id": "org_acme_corp",
+    "query": "How much can I expense for domestic travel meals?",
+    "expected_keywords": ["75"],
+    "expected_document": "Acme_Employee_Handbook_2026.md",
+    "should_refuse": false
+  },
+  {
+    "id": "eval_04_acme_expensify_deadline",
+    "org_id": "org_acme_corp",
+    "query": "What is the deadline for submitting travel expense receipts?",
+    "expected_keywords": ["14"],
+    "expected_document": "Acme_Employee_Handbook_2026.md",
+    "should_refuse": false
+  },
+  {
+    "id": "eval_05_acme_flight_upgrade",
+    "org_id": "org_acme_corp",
+    "query": "When do flights qualify for premium economy upgrade?",
+    "expected_keywords": ["4 hours"],
+    "expected_document": "Acme_Employee_Handbook_2026.md",
+    "should_refuse": false
+  },
+  {
+    "id": "eval_06_acme_wellness_stipend",
+    "org_id": "org_acme_corp",
+    "query": "What is the annual mental wellness stipend amount?",
+    "expected_keywords": ["2,000"],
+    "expected_document": "Acme_Employee_Handbook_2026.md",
+    "should_refuse": false
+  },
+  {
+    "id": "eval_07_cyberdyne_phoenix_date",
+    "org_id": "org_cyberdyne",
+    "query": "When is Project Phoenix scheduled to launch?",
+    "expected_keywords": ["January"],
+    "expected_document": "cyberdyne",
+    "should_refuse": false
+  },
+  {
+    "id": "eval_08_cyberdyne_phoenix_director",
+    "org_id": "org_cyberdyne",
+    "query": "Who is the defense program director for Project Phoenix?",
+    "expected_keywords": ["Miles Dyson"],
+    "expected_document": "Cyberdyne_Defense_Protocols.md",
+    "should_refuse": false
+  },
+  {
+    "id": "eval_09_cyberdyne_contract_value",
+    "org_id": "org_cyberdyne",
+    "query": "What is the total defense contract value for Project Phoenix?",
+    "expected_keywords": ["840"],
+    "expected_document": "Cyberdyne_Defense_Protocols.md",
+    "should_refuse": false
+  },
+  {
+    "id": "eval_10_cyberdyne_sector7_clearance",
+    "org_id": "org_cyberdyne",
+    "query": "What security clearance level is required for Sector 7 cleanroom access?",
+    "expected_keywords": ["Level 5"],
+    "expected_document": "Cyberdyne_Defense_Protocols.md",
+    "should_refuse": false
+  },
+  {
+    "id": "eval_11_cyberdyne_biometric_cycle",
+    "org_id": "org_cyberdyne",
+    "query": "How frequently must biometric retargeting be calibrated?",
+    "expected_keywords": ["30 days"],
+    "expected_document": "Cyberdyne_Defense_Protocols.md",
+    "should_refuse": false
+  },
+  {
+    "id": "eval_12_cyberdyne_radiation_pay",
+    "org_id": "org_cyberdyne",
+    "query": "What is the compensation multiplier for engineers in high-radiation sectors?",
+    "expected_keywords": ["2.5x"],
+    "expected_document": "Cyberdyne_Defense_Protocols.md",
+    "should_refuse": false
+  },
+  {
+    "id": "eval_13_cyberdyne_rest_days",
+    "org_id": "org_cyberdyne",
+    "query": "How many mandatory rest days are given post-cycle in radiation sectors?",
+    "expected_keywords": ["30"],
+    "expected_document": "Cyberdyne_Defense_Protocols.md",
+    "should_refuse": false
+  },
+  {
+    "id": "eval_14_acme_refusal_cyberdyne_info",
+    "org_id": "org_acme_corp",
+    "query": "What is the security clearance required for Sector 7 cleanroom?",
+    "expected_keywords": [],
+    "expected_document": null,
+    "should_refuse": true
+  },
+  {
+    "id": "eval_15_acme_refusal_general_trivia",
+    "org_id": "org_acme_corp",
+    "query": "What is the capital of France and who won the 1998 World Cup?",
+    "expected_keywords": [],
+    "expected_document": null,
+    "should_refuse": true
+  },
+  {
+    "id": "eval_16_cyberdyne_refusal_acme_meals",
+    "org_id": "org_cyberdyne",
+    "query": "What is the daily meal allowance in Expensify for domestic travel?",
+    "expected_keywords": [],
+    "expected_document": null,
+    "should_refuse": true
+  },
+  {
+    "id": "eval_17_cyberdyne_refusal_general_crypto",
+    "org_id": "org_cyberdyne",
+    "query": "How do I mine Bitcoin on a home computer?",
+    "expected_keywords": [],
+    "expected_document": null,
+    "should_refuse": true
+  },
+  {
+    "id": "eval_18_acme_lead_engineer",
+    "org_id": "org_acme_corp",
+    "query": "Who is the engineering lead for Acme Project Phoenix?",
+    "expected_keywords": ["Elena", "Rostova"],
+    "expected_document": "acme",
+    "should_refuse": false
+  },
+  {
+    "id": "eval_19_acme_dental_benefits",
+    "org_id": "org_acme_corp",
+    "query": "How many dental cleanings are covered per year by health insurance?",
+    "expected_keywords": ["cleanings"],
+    "expected_document": "Acme_Employee_Handbook_2026.md",
+    "should_refuse": false
+  },
+  {
+    "id": "eval_20_cyberdyne_breach_consequence",
+    "org_id": "org_cyberdyne",
+    "query": "What happens if an employee breaches protocol at Cyberdyne?",
+    "expected_keywords": ["revocation"],
+    "expected_document": "Cyberdyne_Defense_Protocols.md",
+    "should_refuse": false
+  }
+]

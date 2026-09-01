@@ -1,0 +1,9 @@
+ORGANIZATION CONTEXT CHUNKS:
+---------------------
+{context_blocks}
+---------------------
+
+USER QUESTION:
+{query}
+
+GROUNDED ANSWER (with citations [Doc: <document_name>, Chunk: <chunk_index>]):
