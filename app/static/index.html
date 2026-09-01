@@ -199,10 +199,30 @@
         <div>
           <h3 style="color: #34d399; font-family: 'Outfit'; margin-bottom: 0.25rem;">🛡️ Riskiest First Gate: Vector Retrieval Isolation Proof</h3>
           <p style="color: var(--text-secondary); font-size: 0.85rem;">
-            Proves mathematically and empirically that vector queries executed as Org A return 0% chunks from Org B, even when documents share identical topic titles (e.g. "Project Phoenix").
+            Select any two tenants to empirically test and prove 0% cross-tenant vector leakage between their knowledge bases.
           </p>
         </div>
         <button class="btn-send" onclick="runLiveIsolationCheck()">⚡ Run Live Isolation Audit</button>
+      </div>
+
+      <!-- Tenant Selectors & Test Query Bar -->
+      <div style="background: var(--bg-surface); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 1rem 1.25rem; margin-bottom: 1.25rem; display: flex; flex-wrap: wrap; gap: 1rem; align-items: center;">
+        <div style="display: flex; align-items: center; gap: 0.5rem; flex: 1; min-width: 220px;">
+          <label style="font-size: 0.8rem; font-weight: 600; color: #a5b4fc; white-space: nowrap;">🏢 Organization A:</label>
+          <select id="isoOrgASelect" class="tenant-select" style="width: 100%;" onchange="updateIsoPanelLabels()">
+            <!-- Injected dynamically -->
+          </select>
+        </div>
+        <div style="display: flex; align-items: center; gap: 0.5rem; flex: 1; min-width: 220px;">
+          <label style="font-size: 0.8rem; font-weight: 600; color: #f472b6; white-space: nowrap;">🏢 Organization B:</label>
+          <select id="isoOrgBSelect" class="tenant-select" style="width: 100%;" onchange="updateIsoPanelLabels()">
+            <!-- Injected dynamically -->
+          </select>
+        </div>
+        <div style="display: flex; align-items: center; gap: 0.5rem; flex: 2; min-width: 280px;">
+          <label style="font-size: 0.8rem; font-weight: 600; color: var(--text-secondary); white-space: nowrap;">🔍 Test Query:</label>
+          <input type="text" id="isoQueryInput" class="chat-input" style="padding: 0.5rem 0.8rem; font-size: 0.85rem;" value="What is the Project Phoenix launch date, revenue, and security protocols?" placeholder="Enter query to test isolation..." />
+        </div>
       </div>
 
       <div class="isolation-lab-grid">
@@ -210,13 +230,13 @@
         <div class="tenant-panel">
           <div class="tenant-panel-header">
             <div>
-              <h4 style="color: #a5b4fc;">Organization A: Acme Corporation</h4>
-              <span style="font-size: 0.75rem; color: var(--text-muted);">Internal Topic: Quantum Processor Phoenix ($12.5M)</span>
+              <h4 id="orgAPanelTitle" style="color: #a5b4fc;">Organization A</h4>
+              <span id="orgAPanelSub" style="font-size: 0.75rem; color: var(--text-muted);">Tenant Vector Isolation Boundary</span>
             </div>
-            <span class="status-badge ready">Isolated</span>
+            <span id="orgABadge" class="status-badge ready">Isolated</span>
           </div>
           <div id="orgARetrievalBox" style="font-size: 0.85rem; color: var(--text-secondary); min-height: 220px; background: rgba(0,0,0,0.3); border-radius: var(--radius-sm); padding: 1rem;">
-            Click "Run Live Isolation Audit" to inspect retrieved chunks.
+            Select organizations and click "Run Live Isolation Audit" to inspect retrieved chunks.
           </div>
         </div>
 
@@ -224,13 +244,13 @@
         <div class="tenant-panel">
           <div class="tenant-panel-header">
             <div>
-              <h4 style="color: #f472b6;">Organization B: Cyberdyne Systems</h4>
-              <span style="font-size: 0.75rem; color: var(--text-muted);">Internal Topic: Cybernetic Defense Phoenix ($840M)</span>
+              <h4 id="orgBPanelTitle" style="color: #f472b6;">Organization B</h4>
+              <span id="orgBPanelSub" style="font-size: 0.75rem; color: var(--text-muted);">Tenant Vector Isolation Boundary</span>
             </div>
-            <span class="status-badge ready">Isolated</span>
+            <span id="orgBBadge" class="status-badge ready">Isolated</span>
           </div>
           <div id="orgBRetrievalBox" style="font-size: 0.85rem; color: var(--text-secondary); min-height: 220px; background: rgba(0,0,0,0.3); border-radius: var(--radius-sm); padding: 1rem;">
-            Click "Run Live Isolation Audit" to inspect retrieved chunks.
+            Select organizations and click "Run Live Isolation Audit" to inspect retrieved chunks.
           </div>
         </div>
       </div>

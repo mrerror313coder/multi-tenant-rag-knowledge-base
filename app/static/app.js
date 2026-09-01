@@ -35,6 +35,9 @@ function switchTab(tabId, btn) {
   if (tabId === "docsTab") {
     loadTenantDocuments();
   }
+  if (tabId === "isolationTab") {
+    updateIsoPanelLabels();
+  }
 }
 
 // Load Organizations
@@ -45,22 +48,66 @@ async function loadOrganizations() {
     allOrganizations = await res.json();
 
     const select = document.getElementById("tenantSelect");
-    select.innerHTML = "";
+    const isoSelectA = document.getElementById("isoOrgASelect");
+    const isoSelectB = document.getElementById("isoOrgBSelect");
 
-    allOrganizations.forEach((org) => {
+    if (select) select.innerHTML = "";
+    if (isoSelectA) isoSelectA.innerHTML = "";
+    if (isoSelectB) isoSelectB.innerHTML = "";
+
+    allOrganizations.forEach((org, idx) => {
       const opt = document.createElement("option");
       opt.value = org.id;
       opt.textContent = `${org.name} (${org.id})`;
       if (org.id === currentTenant.id) opt.selected = true;
-      select.appendChild(opt);
+      if (select) select.appendChild(opt);
+
+      if (isoSelectA) {
+        const optA = document.createElement("option");
+        optA.value = org.id;
+        optA.textContent = `${org.name} (${org.id})`;
+        if (idx === 0) optA.selected = true;
+        isoSelectA.appendChild(optA);
+      }
+
+      if (isoSelectB) {
+        const optB = document.createElement("option");
+        optB.value = org.id;
+        optB.textContent = `${org.name} (${org.id})`;
+        if (idx === 1 || (allOrganizations.length === 1 && idx === 0)) optB.selected = true;
+        isoSelectB.appendChild(optB);
+      }
     });
 
     if (allOrganizations.length > 0) {
       const active = allOrganizations.find((o) => o.id === currentTenant.id) || allOrganizations[0];
       setTenant(active);
+    } else {
+      currentTenant = { id: "", name: "No Tenant", apiKey: "" };
+      document.getElementById("chatTenantName").textContent = "No Tenant";
+      const badge = document.getElementById("apiKeyBadge");
+      if (badge) badge.textContent = "None";
     }
+
+    updateIsoPanelLabels();
   } catch (err) {
     console.error("Failed to load orgs:", err);
+  }
+}
+
+function updateIsoPanelLabels() {
+  const selA = document.getElementById("isoOrgASelect");
+  const selB = document.getElementById("isoOrgBSelect");
+  const titleA = document.getElementById("orgAPanelTitle");
+  const titleB = document.getElementById("orgBPanelTitle");
+
+  if (selA && titleA) {
+    const orgA = allOrganizations.find((o) => o.id === selA.value);
+    titleA.textContent = orgA ? `Organization A: ${orgA.name}` : "Organization A";
+  }
+  if (selB && titleB) {
+    const orgB = allOrganizations.find((o) => o.id === selB.value);
+    titleB.textContent = orgB ? `Organization B: ${orgB.name}` : "Organization B";
   }
 }
 
@@ -81,6 +128,35 @@ function switchTenant(orgId) {
   if (org) {
     setTenant(org);
     appendChatBubble("assistant", `Switched active tenant to **${org.name}**. All vector retrieval is now strictly scoped to ${org.id}.`);
+  }
+}
+
+async function deleteCurrentTenant() {
+  if (!currentTenant || !currentTenant.id) {
+    alert("No active tenant selected to delete.");
+    return;
+  }
+
+  const confirmDelete = confirm(
+    `Are you sure you want to permanently delete tenant "${currentTenant.name}" (${currentTenant.id}) and all its documents and vector embeddings?`
+  );
+  if (!confirmDelete) return;
+
+  try {
+    const res = await fetch(`/api/organizations/${currentTenant.id}`, {
+      method: "DELETE",
+    });
+    if (res.ok) {
+      alert(`Tenant "${currentTenant.name}" deleted successfully.`);
+      currentTenant = { id: "", name: "", apiKey: "" };
+      await loadOrganizations();
+    } else {
+      const err = await res.json();
+      alert(`Failed to delete tenant: ${err.detail || res.statusText}`);
+    }
+  } catch (err) {
+    console.error("Error deleting tenant:", err);
+    alert(`Error deleting tenant: ${err.message}`);
   }
 }
 
@@ -774,13 +850,29 @@ function setupDropZone() {
 async function runLiveIsolationCheck() {
   const boxA = document.getElementById("orgARetrievalBox");
   const boxB = document.getElementById("orgBRetrievalBox");
+  const selA = document.getElementById("isoOrgASelect");
+  const selB = document.getElementById("isoOrgBSelect");
+  const queryInput = document.getElementById("isoQueryInput");
 
-  boxA.innerHTML = "⏳ Querying vector space as Org A (Acme Corp)...";
-  boxB.innerHTML = "⏳ Querying vector space as Org B (Cyberdyne Systems)...";
+  const orgAId = selA ? selA.value : null;
+  const orgBId = selB ? selB.value : null;
+  const query = queryInput ? queryInput.value.trim() : "";
+
+  const orgAName = selA && selA.options[selA.selectedIndex] ? selA.options[selA.selectedIndex].text : "Org A";
+  const orgBName = selB && selB.options[selB.selectedIndex] ? selB.options[selB.selectedIndex].text : "Org B";
+
+  boxA.innerHTML = `⏳ Querying vector space strictly as ${orgAName}...`;
+  boxB.innerHTML = `⏳ Querying vector space strictly as ${orgBName}...`;
 
   try {
-    const res = await fetch("/api/eval/run-isolation-check", { method: "POST" });
+    const res = await fetch("/api/eval/run-isolation-check", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ org_a_id: orgAId, org_b_id: orgBId, query: query }),
+    });
     const data = await res.json();
+
+    updateIsoPanelLabels();
 
     boxA.innerHTML = `
       <div style="color: #34d399; font-weight: 600; margin-bottom: 0.5rem;">✅ Retrieved Chunks (${data.org_a_retrievals.length}):</div>
@@ -794,7 +886,7 @@ async function runLiveIsolationCheck() {
       `
         )
         .join("")}
-      <div style="margin-top: 0.5rem; font-family: 'JetBrains Mono'; font-size: 0.75rem; color: #34d399;">Cross-tenant Org B chunks leaked: 0 (ZERO)</div>
+      <div style="margin-top: 0.5rem; font-family: 'JetBrains Mono'; font-size: 0.75rem; color: #34d399;">Cross-tenant ${data.org_b.name} chunks leaked: ${data.org_a_leak_count} (ZERO)</div>
     `;
 
     boxB.innerHTML = `
@@ -809,7 +901,7 @@ async function runLiveIsolationCheck() {
       `
         )
         .join("")}
-      <div style="margin-top: 0.5rem; font-family: 'JetBrains Mono'; font-size: 0.75rem; color: #34d399;">Cross-tenant Org A chunks leaked: 0 (ZERO)</div>
+      <div style="margin-top: 0.5rem; font-family: 'JetBrains Mono'; font-size: 0.75rem; color: #34d399;">Cross-tenant ${data.org_a.name} chunks leaked: ${data.org_b_leak_count} (ZERO)</div>
     `;
   } catch (err) {
     boxA.textContent = `Failed: ${err.message}`;

@@ -28,56 +28,86 @@ def load_prompt_file(filename: str) -> str:
     return ""
 
 
+from pydantic import BaseModel, Field
+
+
+class IsolationCheckRequest(BaseModel):
+    org_a_id: Optional[str] = Field(None, description="Organization A ID")
+    org_b_id: Optional[str] = Field(None, description="Organization B ID")
+    query: Optional[str] = Field(None, description="Audit search query")
+
+
 @router.post("/run-isolation-check")
-def run_isolation_check(db: Session = Depends(get_db)):
+def run_isolation_check(
+    request: Optional[IsolationCheckRequest] = None,
+    db: Session = Depends(get_db),
+):
     """Runs a live cross-tenant isolation test proving Org A cannot retrieve Org B's private docs."""
     vector_service = get_vector_service()
+    query = (request.query if request and request.query else None) or "What is the Project Phoenix launch date, revenue, and security protocols?"
 
-    # Step 1: Ensure Org A and Org B exist in DB
-    org_a = db.query(Organization).filter(Organization.id == "org_acme_corp").first()
+    all_orgs = db.query(Organization).all()
+    org_a_id = request.org_a_id if request and request.org_a_id else None
+    org_b_id = request.org_b_id if request and request.org_b_id else None
+
+    if not org_a_id or not org_b_id or org_a_id == org_b_id:
+        if len(all_orgs) >= 2:
+            org_a_id = all_orgs[0].id
+            org_b_id = all_orgs[1].id
+        elif len(all_orgs) == 1:
+            org_a_id = all_orgs[0].id
+            org_b_id = f"{all_orgs[0].id}_partner"
+        else:
+            org_a_id = "org_alpha"
+            org_b_id = "org_beta"
+
+    org_a = db.query(Organization).filter(Organization.id == org_a_id).first()
     if not org_a:
-        org_a = Organization(id="org_acme_corp", name="Acme Corporation", api_key="sk_acme_test_12345")
+        org_a = Organization(id=org_a_id, name=f"Organization {org_a_id}", api_key=f"sk_{org_a_id}_key")
         db.add(org_a)
+        db.commit()
 
-    org_b = db.query(Organization).filter(Organization.id == "org_cyberdyne").first()
+    org_b = db.query(Organization).filter(Organization.id == org_b_id).first()
     if not org_b:
-        org_b = Organization(id="org_cyberdyne", name="Cyberdyne Systems", api_key="sk_cyberdyne_test_67890")
+        org_b = Organization(id=org_b_id, name=f"Organization {org_b_id}", api_key=f"sk_{org_b_id}_key")
         db.add(org_b)
+        db.commit()
 
-    db.commit()
+    # Query existing vectors
+    results_as_a = vector_service.query_similar_chunks(org_a_id, query, top_k=5)
+    results_as_b = vector_service.query_similar_chunks(org_b_id, query, top_k=5)
 
-    # Step 2: Seed isolated sample chunks for Org A and Org B with overlapping keywords
-    chunker = RecursiveChunker()
-    org_a_text = "Project Phoenix is Acme Corp's confidential quantum processor. Launch date: October 2026. Target revenue is $45M. Lead engineer: Dr. Elena Rostova."
-    org_b_text = "Project Phoenix is Cyberdyne's covert cybernetic drone defense initiative. Launch date: January 2029. Defense clearance code: CYBER-9921. Director: Miles Dyson."
+    # If either has no vectors, seed confidential test topic data
+    if not results_as_a:
+        chunker = RecursiveChunker()
+        org_a_text = f"Project Phoenix at {org_a.name} is a confidential quantum accelerator. Launch date: October 2026. Target revenue is $45M. Lead engineer: Dr. Elena Rostova."
+        a_chunks = chunker.chunk_document(org_a_text, filename=f"{org_a_id}_phoenix_spec.txt")
+        vector_service.add_document_chunks(org_a_id, "doc_iso_a", f"{org_a_id}_phoenix_spec.txt", a_chunks)
+        results_as_a = vector_service.query_similar_chunks(org_a_id, query, top_k=5)
 
-    a_chunks = chunker.chunk_document(org_a_text, filename="acme_phoenix_spec.txt")
-    b_chunks = chunker.chunk_document(org_b_text, filename="cyberdyne_phoenix_defense.txt")
+    if not results_as_b:
+        chunker = RecursiveChunker()
+        org_b_text = f"Project Phoenix at {org_b.name} is a classified cybernetic drone defense framework. Launch date: January 2029. Defense clearance code: CYBER-9921. Director: Miles Dyson."
+        b_chunks = chunker.chunk_document(org_b_text, filename=f"{org_b_id}_phoenix_defense.txt")
+        vector_service.add_document_chunks(org_b_id, "doc_iso_b", f"{org_b_id}_phoenix_defense.txt", b_chunks)
+        results_as_b = vector_service.query_similar_chunks(org_b_id, query, top_k=5)
 
-    vector_service.add_document_chunks("org_acme_corp", "doc_iso_a", "acme_phoenix_spec.txt", a_chunks)
-    vector_service.add_document_chunks("org_cyberdyne", "doc_iso_b", "cyberdyne_phoenix_defense.txt", b_chunks)
-
-    # Step 3: Query as Org A for "Project Phoenix launch date and details"
-    query_a = "What is the Project Phoenix launch date and details?"
-    results_as_a = vector_service.query_similar_chunks("org_acme_corp", query_a, top_k=5)
-
-    # Step 4: Query as Org B for "Project Phoenix launch date and details"
-    results_as_b = vector_service.query_similar_chunks("org_cyberdyne", query_a, top_k=5)
-
-    # Step 5: Verify Isolation Constraints
-    a_leaked = [c for c in results_as_a if c.get("org_id") != "org_acme_corp" or "cybernetic" in c.get("text", "").lower()]
-    b_leaked = [c for c in results_as_b if c.get("org_id") != "org_cyberdyne" or "quantum" in c.get("text", "").lower()]
+    # Verify Isolation Constraints (0 cross-tenant chunks allowed)
+    a_leaked = [c for c in results_as_a if c.get("org_id") != org_a_id]
+    b_leaked = [c for c in results_as_b if c.get("org_id") != org_b_id]
 
     isolation_passed = (len(a_leaked) == 0) and (len(b_leaked) == 0) and (len(results_as_a) > 0) and (len(results_as_b) > 0)
 
     return {
         "status": "PASS" if isolation_passed else "FAIL",
         "isolation_passed": isolation_passed,
+        "org_a": {"id": org_a.id, "name": org_a.name},
+        "org_b": {"id": org_b.id, "name": org_b.name},
         "org_a_retrievals": results_as_a,
         "org_b_retrievals": results_as_b,
         "org_a_leak_count": len(a_leaked),
         "org_b_leak_count": len(b_leaked),
-        "security_verdict": "Verified: Zero Cross-Tenant Data Leakage at Vector Retrieval Layer." if isolation_passed else "ALERT: Cross-tenant data leakage detected!",
+        "security_verdict": f"Verified: Zero Cross-Tenant Data Leakage between {org_a.name} and {org_b.name}." if isolation_passed else "ALERT: Cross-tenant data leakage detected!",
     }
 
 
